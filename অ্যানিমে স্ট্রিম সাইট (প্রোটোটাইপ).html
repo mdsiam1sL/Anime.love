@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>অ্যানিমে স্ট্রিম</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f5fb;--card:#fff;--text:#1c1b29;--muted:#6b6a80;--accent:#7c3aed;--line:#e3e1f0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f0e17;--card:#1a1926;--text:#f1f0fa;--muted:#9b9ab5;--accent:#a78bfa;--line:#2b2a3d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f0e17;--card:#1a1926;--text:#f1f0fa;--muted:#9b9ab5;--accent:#a78bfa;--line:#2b2a3d;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Bengali","Segoe UI",sans-serif}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5}
+h1{font-size:20px;margin:0;color:var(--accent)}
+input,select,button{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+#q{flex:1;min-width:160px}
+button{cursor:pointer}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
+.poster{aspect-ratio:2/3;display:flex;align-items:flex-end;padding:10px;color:#fff;font-weight:700;font-size:15px}
+.meta{padding:8px 10px;font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+#player{display:none;margin-bottom:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+video{width:100%;max-height:60vh;background:#000;border-radius:8px}
+.ph{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:#000;color:#bbb;border-radius:8px;text-align:center;padding:16px}
+details{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+summary{cursor:pointer;font-weight:600}
+form{display:grid;gap:8px;margin-top:10px}
+small{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎌 অ্যানিমে স্ট্রিম</h1>
+  <input id="q" placeholder="অ্যানিমে খুঁজুন…" autocomplete="off">
+  <select id="g"><option value="">সব জনরা</option></select>
+</header>
+<main>
+  <section id="player">
+    <div id="screen"></div>
+    <h2 id="pt" style="margin:10px 0 2px"></h2>
+    <small id="pm"></small>
+    <div style="margin-top:8px"><button id="close">বন্ধ করুন</button></div>
+  </section>
+  <div id="grid" class="grid"></div>
+  <details>
+    <summary>➕ নতুন অ্যানিমে যোগ করুন (অ্যাডমিন)</summary>
+    <form id="f">
+      <input name="title" placeholder="নাম" required>
+      <input name="genre" placeholder="জনরা (যেমন: অ্যাকশন)" required>
+      <input name="year" placeholder="সাল" type="number">
+      <input name="url" placeholder="ভিডিও লিংক (.mp4 / .m3u8 — শুধু আপনার লাইসেন্স করা কনটেন্ট)">
+      <button class="primary" type="submit">যোগ করুন</button>
+      <small>এই প্রোটোটাইপে ডেটা শুধু এই ব্রাউজারে থাকে। আসল সাইটে ডাটাবেস লাগবে।</small>
+    </form>
+  </details>
+</main>
+<script>
+var KEY="anime_list_v1";
+var seed=[
+ {title:"নমুনা অ্যানিমে ১",genre:"অ্যাকশন",year:2024,url:""},
+ {title:"নমুনা অ্যানিমে ২",genre:"রোমান্স",year:2023,url:""},
+ {title:"নমুনা অ্যানিমে ৩",genre:"ফ্যান্টাসি",year:2022,url:""},
+ {title:"নমুনা অ্যানিমে ৪",genre:"কমেডি",year:2021,url:""},
+ {title:"নমুনা অ্যানিমে ৫",genre:"সাই-ফাই",year:2020,url:""},
+ {title:"নমুনা অ্যানিমে ৬",genre:"হরর",year:2019,url:""}
+];
+var list=seed;
+try{var s=localStorage.getItem(KEY);if(s)list=JSON.parse(s)}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(list))}catch(e){}}
+function color(t){var h=0;for(var i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))%360;return "linear-gradient(160deg,hsl("+h+",65%,45%),hsl("+((h+50)%360)+",70%,25%))"}
+var $=function(i){return document.getElementById(i)};
+function genres(){var set={};list.forEach(function(a){set[a.genre]=1});var cur=$("g").value;
+ $("g").innerHTML='<option value="">সব জনরা</option>'+Object.keys(set).map(function(x){return '<option>'+esc(x)+'</option>'}).join("");$("g").value=cur}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function render(){
+ var q=$("q").value.trim().toLowerCase(),g=$("g").value;
+ var r=list.map(function(a,i){return{a:a,i:i}}).filter(function(o){return(!g||o.a.genre===g)&&(!q||o.a.title.toLowerCase().indexOf(q)>-1)});
+ $("grid").innerHTML=r.length?r.map(function(o){return '<div class="card" data-i="'+o.i+'"><div class="poster" style="background:'+color(o.a.title)+'">'+esc(o.a.title)+'</div><div class="meta">'+esc(o.a.genre)+(o.a.year?' • '+o.a.year:'')+'</div></div>'}).join(""):'<div class="empty" style="grid-column:1/-1">কিছু পাওয়া যায়নি</div>';
+}
+$("grid").addEventListener("click",function(e){var c=e.target.closest(".card");if(!c)return;play(list[+c.dataset.i])});
+function play(a){
+ $("player").style.display="block";$("pt").textContent=a.title;$("pm").textContent=a.genre+(a.year?" • "+a.year:"");
+ $("screen").innerHTML=a.url?'<video controls autoplay playsinline></video>':'<div class="ph">এই অ্যানিমের ভিডিও লিংক এখনো যোগ করা হয়নি</div>';
+ if(a.url){$("screen").firstChild.src=a.url}
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+$("close").onclick=function(){$("screen").innerHTML="";$("player").style.display="none"};
+$("q").oninput=render;$("g").onchange=render;
+$("f").onsubmit=function(e){e.preventDefault();var d=new FormData(e.target);
+ list.unshift({title:d.get("title"),genre:d.get("genre"),year:d.get("year"),url:d.get("url")});
+ save();genres();render();e.target.reset()};
+genres();render();
+</script>
+</body>
+</html>
